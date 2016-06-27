@@ -33,6 +33,9 @@ class ReferenceFrame {
       Eigen::Vector3d const& in_this_frame);
   Eigen::Vector3d ToInertialAngularVelocity();
 
+  using FrameVersion = uint32_t;
+  FrameVersion GetRev() const { return parent_rev_cached_; }
+
  private:
   explicit ReferenceFrame(ReferenceFrame const* const parent,
                           Eigen::Matrix4d const& transform_matrix);
@@ -41,7 +44,6 @@ class ReferenceFrame {
   bool is_inertial() const;
   bool is_cache_valid() const;
 
-  using FrameVersion = uint32_t;
   mutable FrameVersion parent_rev_cached_ = 0, current_rev_ = 0;
 
   mutable bool cache_valid_{false};

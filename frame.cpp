@@ -25,7 +25,9 @@ ReferenceFrame::ReferenceFrame(ReferenceFrame const* const parent_ptr,
 }
 
 ReferenceFrame ReferenceFrame::InertialFrame() {
-  return ReferenceFrame(nullptr, Eigen::Matrix4d::Identity());
+  auto ret = ReferenceFrame(nullptr, Eigen::Matrix4d::Identity());
+  ret.cache_valid_ = true;
+  return ret;
 }
 
 Eigen::Vector3d ReferenceFrame::ToInertialCoordinates(
@@ -68,19 +70,22 @@ void ReferenceFrame::SetVelocity(Eigen::Vector3d const& velocity,
 bool ReferenceFrame::is_inertial() const { return parent_ == nullptr; }
 
 bool ReferenceFrame::is_cache_valid() const {
-  return cache_valid_ &&
-         !(parent_->should_recalculate_child(parent_rev_cached_));
+  return is_inertial() ||
+         (cache_valid_ &&
+          !(parent_->should_recalculate_child(parent_rev_cached_)));
 }
 
 // TODO(Kyle) Cache this when it doesn't need to be recalculated
 Eigen::Matrix4d ReferenceFrame::GetTransformFromInertial() const {
   if (is_inertial()) {
+    cache_valid_ = true;
     cached_inertial_transform_ = homogenous_transform_;
   } else if (!is_cache_valid()) {
     cached_inertial_transform_ =
         parent_->GetTransformFromInertial() * homogenous_transform_;
     parent_rev_cached_ = parent_->current_rev_;
     current_rev_++;
+    cache_valid_ = true;
   }
 
   return cached_inertial_transform_;

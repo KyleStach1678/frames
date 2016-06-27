@@ -193,3 +193,20 @@ TEST(ReferenceFrame, CacheIsCorrect) {
     EXPECT_NEAR(point(2), -6.0, 1e-9);
   }
 }
+
+TEST(ReferenceFrame, CachePerfTest) {
+  auto inertial = ReferenceFrame::InertialFrame();
+  ReferenceFrame parent(&inertial,
+                        (Eigen::Vector3d() << 1.0, 2.0, 3.0).finished(),
+                        Eigen::Vector3d::Zero());
+  ReferenceFrame child(&parent, (Eigen::Vector3d() << 1.0, 2.0, 3.0).finished(),
+                       Eigen::Vector3d::Zero());
+
+  for (uint32_t i = 0; i < 100000; i++) {
+    auto point = child.ToInertialCoordinates(Eigen::Vector3d::Zero());
+
+    EXPECT_NEAR(point(0), 2.0, 1e-9);
+    EXPECT_NEAR(point(1), 4.0, 1e-9);
+    EXPECT_NEAR(point(2), 6.0, 1e-9);
+  }
+}
