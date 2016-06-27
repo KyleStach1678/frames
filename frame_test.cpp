@@ -156,3 +156,40 @@ TEST(ReferenceFrame, RotationToTranslation) {
   EXPECT_NEAR(vel(1), 1.0, 1e-9);
   EXPECT_NEAR(vel(2), 0.0, 1e-9);
 }
+
+TEST(ReferenceFrame, CacheIsCorrect) {
+  auto inertial = ReferenceFrame::InertialFrame();
+  ReferenceFrame parent(&inertial,
+                        (Eigen::Vector3d() << 1.0, 2.0, 3.0).finished(),
+                        Eigen::Vector3d::Zero());
+  ReferenceFrame child(&parent, (Eigen::Vector3d() << 1.0, 2.0, 3.0).finished(),
+                       Eigen::Vector3d::Zero());
+
+  {
+    auto point = child.ToInertialCoordinates(Eigen::Vector3d::Zero());
+
+    EXPECT_NEAR(point(0), 2.0, 1e-9);
+    EXPECT_NEAR(point(1), 4.0, 1e-9);
+    EXPECT_NEAR(point(2), 6.0, 1e-9);
+  }
+
+  child.Set((Eigen::Vector3d() << -1.0, -2.0, -3.0).finished(),
+            Eigen::Vector3d::Zero());
+  {
+    auto point = child.ToInertialCoordinates(Eigen::Vector3d::Zero());
+
+    EXPECT_NEAR(point(0), 0.0, 1e-9);
+    EXPECT_NEAR(point(1), 0.0, 1e-9);
+    EXPECT_NEAR(point(2), 0.0, 1e-9);
+  }
+
+  parent.Set((Eigen::Vector3d() << -1.0, -2.0, -3.0).finished(),
+             Eigen::Vector3d::Zero());
+  {
+    auto point = child.ToInertialCoordinates(Eigen::Vector3d::Zero());
+
+    EXPECT_NEAR(point(0), -2.0, 1e-9);
+    EXPECT_NEAR(point(1), -4.0, 1e-9);
+    EXPECT_NEAR(point(2), -6.0, 1e-9);
+  }
+}

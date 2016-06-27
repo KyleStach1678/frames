@@ -13,34 +13,48 @@ namespace frames {
 // Z is up, X is forward, Y is left
 class ReferenceFrame {
  public:
-  ReferenceFrame(ReferenceFrame const* const parent, Eigen::Vector3d const& translation,
+  ReferenceFrame(ReferenceFrame const* const parent,
+                 Eigen::Vector3d const& translation,
                  Eigen::Vector3d const& rotation);
 
-  Eigen::Vector3d ToInertialCoordinates(Eigen::Vector3d const& in_this_frame) const;
-  Eigen::Vector3d FromInertialCoordinates(Eigen::Vector3d const& in_inertial_frame) const;
+  Eigen::Vector3d ToInertialCoordinates(
+      Eigen::Vector3d const& in_this_frame) const;
+  Eigen::Vector3d FromInertialCoordinates(
+      Eigen::Vector3d const& in_inertial_frame) const;
 
   static ReferenceFrame InertialFrame();
 
   void Set(Eigen::Vector3d const& translation, Eigen::Vector3d const& rotation);
 
-  bool is_inertial() const;
+  void SetVelocity(Eigen::Vector3d const& velocity,
+                   Eigen::Vector3d const& angular_velocity);
 
-  void SetVelocity(Eigen::Vector3d const& velocity, Eigen::Vector3d const& angular_velocity);
-
-  Eigen::Vector3d ToInertialTranslationalVelocity(Eigen::Vector3d const& in_this_frame);
+  Eigen::Vector3d ToInertialTranslationalVelocity(
+      Eigen::Vector3d const& in_this_frame);
   Eigen::Vector3d ToInertialAngularVelocity();
 
  private:
-  explicit ReferenceFrame(ReferenceFrame const* const parent, Eigen::Matrix4d const& transform_matrix);
+  explicit ReferenceFrame(ReferenceFrame const* const parent,
+                          Eigen::Matrix4d const& transform_matrix);
 
+  bool should_recalculate_child(uint32_t parent_revision) const;
+  bool is_inertial() const;
+  bool is_cache_valid() const;
+
+  using FrameVersion = uint32_t;
+  mutable FrameVersion parent_rev_cached_ = 0, current_rev_ = 0;
+
+  mutable bool cache_valid_{false};
   Eigen::Matrix4d GetTransformFromInertial() const;
 
   inline static Eigen::Vector4d ToHomogenousVector(Eigen::Vector3d vec);
   inline static Eigen::Vector3d FromHomogenousVector(Eigen::Vector4d vec);
   inline static Eigen::Vector4d ToHomogenousVelocityVector(Eigen::Vector3d vec);
-  inline static Eigen::Vector3d FromHomogenousVelocityVector(Eigen::Vector4d vec);
+  inline static Eigen::Vector3d FromHomogenousVelocityVector(
+      Eigen::Vector4d vec);
 
   Eigen::Matrix4d homogenous_transform_;
+  mutable Eigen::Matrix4d cached_inertial_transform_;
   // nullptr if it is an inertial frame
   ReferenceFrame const* const parent_;
 

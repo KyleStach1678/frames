@@ -42,6 +42,7 @@ Eigen::Vector3d ReferenceFrame::FromInertialCoordinates(
 
 void ReferenceFrame::Set(Eigen::Vector3d const& translation,
                          Eigen::Vector3d const& rotation) {
+  cache_valid_ = false;
   Eigen::Matrix4d translation_matrix = Eigen::Matrix4d::Identity(),
                   rotation_matrix = Eigen::Matrix4d::Zero();
 
@@ -66,13 +67,23 @@ void ReferenceFrame::SetVelocity(Eigen::Vector3d const& velocity,
 
 bool ReferenceFrame::is_inertial() const { return parent_ == nullptr; }
 
+bool ReferenceFrame::is_cache_valid() const {
+  return cache_valid_ &&
+         !(parent_->should_recalculate_child(parent_rev_cached_));
+}
+
 // TODO(Kyle) Cache this when it doesn't need to be recalculated
 Eigen::Matrix4d ReferenceFrame::GetTransformFromInertial() const {
   if (is_inertial()) {
-    return homogenous_transform_;
-  } else {
-    return parent_->GetTransformFromInertial() * homogenous_transform_;
+    cached_inertial_transform_ = homogenous_transform_;
+  } else if (!is_cache_valid()) {
+    cached_inertial_transform_ =
+        parent_->GetTransformFromInertial() * homogenous_transform_;
+    parent_rev_cached_ = parent_->current_rev_;
+    current_rev_++;
   }
+
+  return cached_inertial_transform_;
 }
 
 Eigen::Vector4d ReferenceFrame::ToHomogenousVector(Eigen::Vector3d vec) {
@@ -130,6 +141,10 @@ Eigen::Vector3d ReferenceFrame::ToInertialAngularVelocity() {
     frame = frame->parent_;
   }
   return FromHomogenousVelocityVector(angular_velocity_sum);
+}
+
+bool ReferenceFrame::should_recalculate_child(FrameVersion cached_rev) const {
+  return !is_cache_valid() || cached_rev < current_rev_;
 }
 
 } /* frames */
